@@ -3,7 +3,7 @@ using Order.Domain.Observability.Interfaces;
 
 namespace Order.Infrastructure.Parser
 {
-    public class MockOrderQueue : IOrderQueue
+    public sealed class MockOrderQueue : IOrderQueue
     {
         private readonly ILogger _logger;
         private readonly List<Domain.Models.Order> _enqueuedOrders = new();
@@ -17,6 +17,7 @@ namespace Order.Infrastructure.Parser
         {
             _logger.LogInformation($"Enqueuing order {order.OrderId}");
             _enqueuedOrders.Add(order);
+
             return Task.CompletedTask;
         }
 

@@ -1,6 +1,6 @@
 ﻿namespace Order.Domain.Entities
 {
-    public sealed class Product
+    public sealed record Product
     {
         public required string ProductId { get; init; }
 

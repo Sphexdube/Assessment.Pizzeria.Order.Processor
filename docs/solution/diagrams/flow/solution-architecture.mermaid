@@ -1,0 +1,103 @@
+flowchart TD
+    consoleApp["Console Application"]
+    
+    fileProcessor["File Processor"]
+    orderValidator["Order Validator"]
+    priceCalculator["Price Calculator"]
+    ingredientCalculator["Ingredient Calculator"]
+    queuePublisher["Queue Publisher"]
+    reportGenerator["Report Generator"]
+    
+    iParserStrategy["IFileParserStrategy"]
+    jsonParser["JsonFileParser"]
+    csvParser["CsvFileParser"]
+    
+    iOrderRepository["IOrderRepository"]
+    orderRepository["OrderRepository"]
+    
+    iProductRepository["IProductRepository"]
+    productRepository["ProductRepository"]
+    
+    iIngredientRepository["IIngredientRepository"]
+    ingredientRepository["IngredientRepository"]
+    
+    iQueueService["IQueueService"]
+    rabbitMQService["RabbitMQService"]
+    
+    orderFiles[("Order Files\n(JSON/CSV)")]
+    productData[("Product Catalog\n(JSON)")]
+    ingredientData[("Ingredient Data\n(JSON)")]
+    messageQueue[("RabbitMQ")]
+    
+    subgraph Presentation
+        consoleApp
+    end
+    
+    subgraph Application
+        fileProcessor
+        orderValidator
+        priceCalculator
+        ingredientCalculator
+        queuePublisher
+        reportGenerator
+    end
+    
+    subgraph Domain
+        subgraph Parsers
+            iParserStrategy
+            jsonParser
+            csvParser
+            
+            jsonParser -.implements.-> iParserStrategy
+            csvParser -.implements.-> iParserStrategy
+        end
+        
+        subgraph Repositories
+            iOrderRepository
+            orderRepository
+            iProductRepository
+            productRepository
+            iIngredientRepository
+            ingredientRepository
+            
+            orderRepository -.implements.-> iOrderRepository
+            productRepository -.implements.-> iProductRepository
+            ingredientRepository -.implements.-> iIngredientRepository
+        end
+        
+        subgraph Services
+            iQueueService
+            rabbitMQService
+            
+            rabbitMQService -.implements.-> iQueueService
+        end
+    end
+    
+    subgraph Infrastructure
+        orderFiles
+        productData
+        ingredientData
+        messageQueue
+    end
+    
+    consoleApp --uses--> fileProcessor
+    consoleApp --uses--> reportGenerator
+    
+    fileProcessor --uses--> iParserStrategy
+    fileProcessor --reads--> orderFiles
+    
+    orderValidator --uses--> iProductRepository
+    priceCalculator --uses--> iProductRepository
+    ingredientCalculator --uses--> iIngredientRepository
+    
+    productRepository --reads--> productData
+    ingredientRepository --reads--> ingredientData
+    
+    queuePublisher --uses--> iQueueService
+    rabbitMQService --publishes to--> messageQueue
+    
+    fileProcessor --passes orders to--> orderValidator
+    orderValidator --passes valid orders to--> priceCalculator
+    priceCalculator --passes priced orders to--> ingredientCalculator
+    ingredientCalculator --passes complete orders to--> queuePublisher
+    queuePublisher --reports results to--> reportGenerator

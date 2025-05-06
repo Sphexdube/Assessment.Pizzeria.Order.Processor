@@ -1,9 +1,9 @@
 ﻿namespace Order.Domain.Models
 {
-    public sealed class OrderItem
+    public sealed record OrderItem
     {
-        public string ProductId { get; set; } = string.Empty;
-        public int Quantity { get; set; }
+        public required string ProductId { get; init; }
+        public int Quantity { get; init; }
 
         public bool IsValid()
         {

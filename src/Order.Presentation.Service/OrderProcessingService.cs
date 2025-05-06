@@ -4,120 +4,76 @@ using Order.Domain.Observability.Interfaces;
 using Order.Infrastructure.Parser.Interfaces;
 using Order.Infrastructure.Persistence.Interfaces;
 
-namespace Order.Presentation.Service
+namespace Order.Presentation.Service;
+
+public sealed class OrderProcessingService(
+        IOrderFileParser orderFileParser,
+        IProductRepository productRepository,
+        IOrderQueue orderQueue,
+        ILogger logger)
 {
-    public class OrderProcessingService
+    public async Task<OrderSummary> ProcessOrdersAsync(string orderFilePath)
     {
-        private readonly IOrderFileParser _orderFileParser;
-        private readonly IProductRepository _productRepository;
-        private readonly IOrderQueue _orderQueue;
-        private readonly ILogger _logger;
+        logger.LogInformation($"Starting to process orders from {orderFilePath}");
 
-        public OrderProcessingService(
-            IOrderFileParser orderFileParser,
-            IProductRepository productRepository,
-            IOrderQueue orderQueue,
-            ILogger logger)
+        List<Domain.Entities.Order> entries = await orderFileParser.ParseOrderFileAsync(orderFilePath);
+        List<Product> products = await productRepository.GetProductsAsync();
+
+        logger.LogInformation($"Parsed {entries.Count} order entries");
+
+        List<Domain.Models.Order> validOrders = new List<Domain.Models.Order>();
+        List<Domain.Models.Order> invalidOrders = new List<Domain.Models.Order>();
+        Dictionary<string, decimal> ingredientTotals = new Dictionary<string, decimal>();
+
+        foreach (var group in entries.GroupBy(e => e.OrderId))
         {
-            _orderFileParser = orderFileParser;
-            _productRepository = productRepository;
-            _orderQueue = orderQueue;
-            _logger = logger;
-        }
+            List<OrderItem> orderItems = group.Select(e => new OrderItem { ProductId = e.ProductId, Quantity = e.Quantity }).ToList();
 
-        public async Task<OrderSummary> ProcessOrdersAsync(string orderFilePath)
-        {
-            _logger.LogInformation($"Starting to process orders from {orderFilePath}");
-
-            var orderEntries = await _orderFileParser.ParseOrderFileAsync(orderFilePath);
-            var products = await _productRepository.GetProductsAsync();
-
-            _logger.LogInformation($"Parsed {orderEntries.Count} order entries");
-
-            // Group entries by OrderId
-            var orderGroups = orderEntries.GroupBy(e => e.OrderId);
-
-            var validOrders = new List<Domain.Models.Order>();
-            var invalidOrders = new List<Domain.Models.Order>();
-            var ingredientTotals = new Dictionary<string, decimal>();
-
-            foreach (var group in orderGroups)
+            Domain.Models.Order order = new Domain.Models.Order
             {
-                var orderEntryGroup = group.ToList();
-                if (orderEntryGroup.Count == 0) continue;
-
-                // Create order from the first entry
-                var firstEntry = orderEntryGroup.First();
-                var order = new Domain.Models.Order
-                {
-                    OrderId = firstEntry.OrderId,
-                    DeliverAt = firstEntry.DeliverAt,
-                    CreatedAt = firstEntry.CreatedAt,
-                    CustomerAddress = firstEntry.CustomerAddress,
-                    Items = new List<OrderItem>()
-                };
-
-                // Add all items from the group
-                foreach (var entry in orderEntryGroup)
-                {
-                    order.Items.Add(new OrderItem
-                    {
-                        ProductId = entry.ProductId,
-                        Quantity = entry.Quantity
-                    });
-                }
-
-                // Validate order
-                if (order.IsValid() && order.Items.All(i => i.IsValid()))
-                {
-                    // Calculate totals
-                    order.CalculateTotals(products);
-
-                    // Add to valid orders
-                    validOrders.Add(order);
-
-                    // Calculate required ingredients
-                    CalculateIngredients(order, products, ingredientTotals);
-
-                    // Enqueue order
-                    await _orderQueue.EnqueueOrderAsync(order);
-
-                    _logger.LogInformation($"Order {order.OrderId} processed successfully");
-                }
-                else
-                {
-                    invalidOrders.Add(order);
-                    _logger.LogWarning($"Order {order.OrderId} is invalid");
-                }
-            }
-
-            return new OrderSummary
-            {
-                ValidOrders = validOrders,
-                InvalidOrders = invalidOrders,
-                RequiredIngredients = ingredientTotals
+                OrderId = group.Key,
+                DeliverAt = group.First().DeliverAt,
+                CreatedAt = group.First().CreatedAt,
+                CustomerAddress = group.First().CustomerAddress,
+                Items = orderItems
             };
+
+            if (order.IsValid() && order.Items.All(i => i.IsValid()))
+            {
+                order.CalculateTotals(products);
+                validOrders.Add(order);
+                
+                AddIngredients(order, products, ingredientTotals);
+                
+                await orderQueue.EnqueueOrderAsync(order);
+                
+                logger.LogInformation($"Order {order.OrderId} processed successfully");
+            }
+            else
+            {
+                invalidOrders.Add(order);
+                logger.LogWarning($"Order {order.OrderId} is invalid");
+            }
         }
 
-        private void CalculateIngredients(Domain.Models.Order order, List<Product> products, Dictionary<string, decimal> ingredientTotals)
+        return new OrderSummary
         {
-            foreach (var item in order.Items)
+            ValidOrders = validOrders,
+            InvalidOrders = invalidOrders,
+            RequiredIngredients = ingredientTotals
+        };
+    }
+
+    private static void AddIngredients(Domain.Models.Order order, List<Product> products, Dictionary<string, decimal> totals)
+    {
+        foreach (var item in order.Items)
+        {
+            if (products.FirstOrDefault(p => p.ProductId == item.ProductId) is { Ingredients: var ingredients })
             {
-                var product = products.FirstOrDefault(p => p.ProductId == item.ProductId);
-                if (product == null) continue;
-
-                foreach (var ingredient in product.Ingredients)
+                foreach (var ing in ingredients)
                 {
-                    var totalAmount = ingredient.Amount * item.Quantity;
-
-                    if (ingredientTotals.ContainsKey(ingredient.Name))
-                    {
-                        ingredientTotals[ingredient.Name] += totalAmount;
-                    }
-                    else
-                    {
-                        ingredientTotals[ingredient.Name] = totalAmount;
-                    }
+                    var amount = ing.Amount * item.Quantity;
+                    totals[ing.Name] = totals.TryGetValue(ing.Name, out var existing) ? existing + amount : amount;
                 }
             }
         }

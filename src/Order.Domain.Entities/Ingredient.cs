@@ -1,6 +1,6 @@
 ﻿namespace Order.Domain.Entities
 {
-    public sealed class Ingredient
+    public sealed record Ingredient
     {
         public required string Name { get; init; }
 

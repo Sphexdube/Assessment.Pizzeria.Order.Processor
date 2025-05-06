@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ${APPLICATION_NAME}
+  namespace: ${PROJECT_NAME}
+data:
+  ${VAULT_NAME}: ${VAULT_SECRET}
+  ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT}
+  TZ: Africa/Johannesburg
+  SSL_CERT_FILE: /run/secrets/kubernetes.io/serviceaccount/ca.crt
+  ELASTIC_APM_SERVICE_NAME: ${APPLICATION_NAME}
+  ELASTIC_APM_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT}
+  ELASTIC_APM_GLOBAL_LABELS: namespace=${PROJECT_NAME},application=${APPLICATION_NAME},opsteam=${OPSTEAM},env=${ENVIRONMENT}${ELASTIC_LABELS}

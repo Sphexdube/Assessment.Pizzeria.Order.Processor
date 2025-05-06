@@ -1,0 +1,279 @@
+#=========================================================================
+# TRIGGERS
+#=========================================================================
+# Branch build triggers
+trigger:
+  branches:
+    include:
+    - main
+    - development
+  tags:
+    include:
+    - '*'
+
+pr:
+  branches:
+    include:
+      - "*"
+
+#=========================================================================
+# PARAMETERS
+#=========================================================================
+parameters:
+- name: environment
+  type: string
+  default: 'Development'
+  values:
+    - 'Development'
+    - 'Test'
+    - 'Production'
+
+#=========================================================================
+# VARIABLES
+#=========================================================================
+variables:
+- group: 'Deployment Variables'
+
+# Environment Variables
+- name: Environment
+  ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
+    value: 'Development'
+  ${{ elseif startsWith(variables['Build.SourceBranch'], 'refs/tags/') }}:
+    value: 'Production'
+  ${{ elseif eq( variables['Build.SourceBranchName'], 'development' ) }}:
+    value: 'Development'
+  ${{ elseif eq( variables['Build.SourceBranchName'], 'main' ) }}:
+    value: 'Test'
+  ${{ else }}:
+    value: ${{ parameters.environment }}
+
+- name: EnvironmentShortCode
+  ${{ if eq( variables['Environment'], 'Development' ) }}:
+    value: 'dev'
+  ${{ elseif eq( variables['Environment'], 'Test' ) }}:
+    value: 'tst'
+  ${{ elseif eq( variables['Environment'], 'Production' ) }}:
+    value: 'prd'
+
+# Conditional Group Variables
+- ${{ if eq( variables['Environment'], 'Development' ) }}:
+  - group: 'Dev Deployment Variables - Order Processor'
+- ${{ if eq( variables['Environment'], 'Test' ) }}:
+  - group: 'Test Deployment Variables - Order Processor'
+- ${{ if eq( variables['Environment'], 'Production' ) }}:
+  - group: 'Prod Deployment Variables - Order Processor'
+
+# Build Variables
+- name: BuildSolutionFileLocation
+  value: 'src/Assessment.Pizzeria.Order.Processor.sln'
+
+# Docker Image Variables
+- name: DockerStartupProject
+  value: 'src/Order.Presentation.Service/Order.Presentation.Service.csproj'
+- name: DockerImageName
+  ${{ if eq( variables['Environment'], 'Development' ) }}:
+    value: 'dev-orderapi'
+  ${{ if eq( variables['Environment'], 'Test' ) }}:
+    value: 'main-orderapi'
+  ${{ if eq( variables['Environment'], 'Production' ) }}:
+    value: 'main-orderapi'
+
+# Openshift Variables
+- name: OpenshiftApplicationName
+  value: 'orderapi'
+- name: OpenshiftNamespaceName
+  value: 'orderprocessor'
+- name: OpenshiftApplicationNamespace
+  value: '$(EnvironmentShortCode)-$(OpenshiftNamespaceName)'
+- name: OpenshiftBuildNamespace
+  value: 'build-$(OpenshiftNamespaceName)'
+- name: OpenShiftService
+  ${{ if eq( variables['Environment'], 'Development' ) }}:
+    value: 'OpenShift' #OCP1 service id
+  ${{ if eq( variables['Environment'], 'Test' ) }}:
+    value: 'OpenShift' #OCP1 service id
+  ${{ if eq( variables['Environment'], 'Production' ) }}:
+    value: 'OpenShift-Production' #OCP3 service id
+- name: OpenshiftRouteAlias
+  ${{ if eq( variables['Environment'], 'Development' ) }}:
+    value: 'ocpdev'
+  ${{ if eq( variables['Environment'], 'Test' ) }}:
+    value: 'ocptst'
+  ${{ if eq( variables['Environment'], 'Production' ) }}:
+    value: 'ocpprd'
+- name: OpenshiftCluster
+  ${{ if eq( variables['Environment'], 'Development' ) }}:
+    value: 'ocp1'
+  ${{ if eq( variables['Environment'], 'Test' ) }}:
+    value: 'ocp1'
+  ${{ if eq( variables['Environment'], 'Production' ) }}:
+    value: 'ocp3'
+
+pool:
+  name: 'Stores Build 01'
+
+#=========================================================================
+# REFERENCE TEMPLATE
+#=========================================================================
+resources:
+  repositories:
+    - repository: buildTemplates
+      type: git
+      name: DA/Tfg.Build.Templates
+
+#=========================================================================
+# TEMPLATE STAGES
+#=========================================================================
+stages:
+
+#=========================================================================
+# PREPARE Stage
+#=========================================================================
+- stage: Prepare
+  condition: succeededOrFailed()
+  jobs:
+    - template: src/prepare/gitversion_prepare.yaml@buildTemplates
+      parameters:
+        environment: $(Environment)
+
+#=========================================================================
+# BUILD Stage
+#=========================================================================
+- stage: Build
+  dependsOn:
+  - Prepare
+  condition: and( not(canceled()),
+                  succeeded(),
+                  in(dependencies.Prepare.result, 'Succeeded', 'SucceededWithIssues', 'Skipped')
+              )
+  jobs:
+    - template: src/build/aspnet_core_dotnet_build_for_k8s.yaml@buildTemplates
+      parameters:
+        environment: $(Environment)
+        environmentShortCode: $(EnvironmentShortCode)
+        buildSolutionFileLocation: '$(BuildSolutionFileLocation)'
+        dockerImageName: '$(DockerImageName)'
+        dockerStartupProject: '$(DockerStartupProject)'
+        openshiftApplicationName: '$(OpenshiftApplicationName)'
+        openshiftNamespaceName: '$(OpenshiftNamespaceName)'
+        openshiftApplicationNamespace: '$(OpenshiftApplicationNamespace)'
+        openshiftBuildNamespace: '$(OpenshiftBuildNamespace)'
+        openshiftCpuLimit: '500m'
+        openshiftCpuRequest: '250m'
+        openshiftGroup: 'orderprocessor'
+        openshiftRouteName: '$(EnvironmentShortCode)-orderprocessor-$(OpenshiftApplicationName)'
+        openshiftRouteAlias: '$(OpenshiftRouteAlias)'
+        openshiftCluster: '$(OpenshiftCluster)'
+        openshiftMemoryLimit: '500Mi'
+        openshiftMemoryRequest: '300Mi'
+        openshiftReplicas: 2
+        team: 'StoreSystems'
+        opsTeam: 'StoreSystems'
+        labels: ',team=StoreSystems'
+        vaultEnvironmentVariableName: '$(VaultName)'
+        vaultSecret: '$(VaultSecret)'
+        dynatraceServiceName: '$(OpenshiftApplicationName)'
+
+#=========================================================================
+# TEST Stage
+#=========================================================================
+- stage: Test
+  dependsOn:
+  - Prepare
+  condition: and( succeeded(),
+                  not(canceled()),
+                  eq(variables['environment'], 'Development'),
+                  in(dependencies.Prepare.result, 'Succeeded', 'Skipped')
+             )
+  jobs:
+  - template: src/test/run_unit_tests_with_sonar_scan.yaml@buildTemplates
+    parameters:
+      environment: $(Environment)
+      sonarNameKey: 'Order.Processor'
+      buildSolutionFileLocation: '$(BuildSolutionFileLocation)'
+      testProject: '$(Build.SourcesDirectory)/test/Order.Tests/Order.Tests.csproj'
+
+#=========================================================================
+# IMAGE stage
+#=========================================================================
+- stage: Image
+  dependsOn:
+  - Prepare
+  - Build
+  - Test
+  condition: and( not(canceled()),
+                  or(eq(variables['environment'], 'Development'), eq(variables['environment'], 'Test')),
+                  in(dependencies.Prepare.result, 'Succeeded', 'Skipped'),
+                  in(dependencies.Build.result, 'Succeeded', 'Skipped'),
+                  in(dependencies.Test.result, 'Succeeded', 'Skipped')
+             )
+  jobs:
+  - template: src/deploy/deploy_docker_image.yaml@buildTemplates
+    parameters:
+      environment: $(Environment)
+      dockerImageName: '$(DockerImageName)'
+      openshiftService: '$(OpenShiftService)'
+      openshiftBuildNamespace: '$(OpenshiftBuildNamespace)'
+
+#=========================================================================
+# DEPLOY stage
+#=========================================================================
+- stage: Deploy
+  dependsOn:
+  - Prepare
+  - Build
+  - Test
+  - Image
+  condition: and( not(canceled()),
+                  in(dependencies.Prepare.result, 'Succeeded', 'Skipped'),
+                  in(dependencies.Build.result, 'Succeeded', 'Skipped'),
+                  in(dependencies.Test.result, 'Succeeded', 'Skipped'),
+                  in(dependencies.Image.result, 'Succeeded', 'Skipped')
+             )
+  jobs:
+  - template: src/deploy/deploy_k8s.yaml@buildTemplates
+    parameters:
+      environment: $(Environment)
+      dockerImageName: '$(DockerImageName)'
+      openshiftService: '$(OpenShiftService)'
+      openshiftApplicationName: '$(OpenshiftApplicationName)'
+      openshiftBuildNamespace: '$(OpenshiftBuildNamespace)'
+      openshiftApplicationNamespace: '$(OpenshiftApplicationNamespace)'
+
+#=========================================================================
+# VALIDATE stage
+#=========================================================================
+- stage: Validate
+  dependsOn:
+  - Prepare
+  - Build
+  - Image
+  - Deploy
+  condition: and( not(canceled()),
+                  in(dependencies.Image.result, 'Succeeded'),
+                  in(dependencies.Deploy.result, 'Succeeded'),
+                  eq( variables['Build.SourceBranchName'], 'main' )
+             )
+  jobs:
+  - template: src/validate/validate_release.yaml@buildTemplates
+
+#=========================================================================
+# RELEASE stage
+#=========================================================================
+- stage: Tag
+  dependsOn:
+  - Prepare
+  - Build
+  - Test
+  - Deploy
+  - Validate
+  condition: and( not(canceled()),
+                  in(dependencies.Prepare.result, 'Succeeded'),
+                  in(dependencies.Build.result, 'Succeeded', 'Skipped'),
+                  in(dependencies.Test.result, 'Succeeded', 'Skipped'),
+                  in(dependencies.Deploy.result, 'Succeeded'),
+                  in(dependencies.Validate.result, 'Succeeded'),
+                  eq( variables['Build.SourceBranchName'], 'main' )
+             )
+  jobs:
+  - template: src/release/tag_repository.yaml@buildTemplates

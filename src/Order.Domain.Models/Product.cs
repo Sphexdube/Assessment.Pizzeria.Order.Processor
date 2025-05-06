@@ -1,11 +1,11 @@
 ﻿namespace Order.Domain.Models
 {
-    public sealed class Product
+    public sealed record Product
     {
-        public string ProductId { get; set; } = string.Empty;
-        public string ProductName { get; set; } = string.Empty;
-        public decimal Price { get; set; }
-        public decimal VAT { get; set; }
-        public List<Ingredient> Ingredients { get; set; } = new();
+        public required string ProductId { get; init; }
+        public required string ProductName { get; init; }
+        public decimal Price { get; init; }
+        public decimal Vat { get; init; }
+        public List<Ingredient>? Ingredients { get; init; }
     }
 }

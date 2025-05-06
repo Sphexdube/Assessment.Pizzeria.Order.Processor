@@ -5,7 +5,7 @@ using System.Text.Json;
 
 namespace Order.Infrastructure.Persistence.Repositories
 {
-    public class ProductRepository : IProductRepository
+    public sealed class ProductRepository : IProductRepository
     {
         private readonly ILogger _logger;
         private List<Product>? _products;
@@ -40,7 +40,7 @@ namespace Order.Infrastructure.Persistence.Repositories
                     ProductId = dto.ProductId,
                     ProductName = dto.ProductName,
                     Price = dto.Price,
-                    VAT = dto.VAT,
+                    Vat = dto.Vat,
                     Ingredients = GetIngredientsForProduct(dto.ProductId, productIngredients)
                 }).ToList();
 

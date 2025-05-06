@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: ${APPLICATION_NAME}
+  namespace: ${PROJECT_NAME}
+spec:
+  ports:
+  - name: dotnet-5000
+    port: ${APPLICATION_PORT}
+    protocol: TCP
+    targetPort: ${APPLICATION_PORT}
+  - name: http-80
+    port: 80
+    protocol: TCP
+    targetPort: ${APPLICATION_PORT}
+  selector:
+    deploymentconfig: ${APPLICATION_NAME}

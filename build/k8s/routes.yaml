@@ -1,0 +1,33 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: ${APPLICATION_NAME}
+  namespace: ${PROJECT_NAME}
+spec:
+  host: ${ROUTE_NAME}.apps.${ROUTE_ALIAS}.ho.fosltd.co.za
+  port:
+    targetPort: "${APPLICATION_PORT}"
+  to:
+    kind: Service
+    name: ${APPLICATION_NAME}
+    weight: 100
+  tls:
+    termination: edge
+  wildcardPolicy: None
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: ${APPLICATION_NAME}-${ROUTE_DIRECT}
+  namespace: ${PROJECT_NAME}
+spec:
+  host: ${ROUTE_NAME}.apps.${ROUTE_DIRECT}.ho.fosltd.co.za
+  port:
+    targetPort: "${APPLICATION_PORT}"
+  to:
+    kind: Service
+    name: ${APPLICATION_NAME}
+    weight: 100
+  tls:
+    termination: edge
+  wildcardPolicy: None

@@ -2,7 +2,7 @@
 
 namespace Order.Domain.Observability
 {
-    public class ConsoleLogger : ILogger
+    public sealed class ConsoleLogger : ILogger
     {
         public void LogInformation(string message)
         {

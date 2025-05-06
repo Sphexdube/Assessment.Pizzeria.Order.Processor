@@ -1,106 +1,77 @@
 ﻿using Order.Domain.Models;
 using Order.Domain.Observability.Interfaces;
 
-namespace Order.Presentation.Service
+namespace Order.Presentation.Service;
+
+public sealed class OrderPresentationService(ILogger logger, OrderProcessingService orderProcessingService)
 {
-    public class OrderPresentationService
+    public async Task RunAsync(string[] args)
     {
-        private readonly ILogger _logger;
-        private readonly OrderProcessingService _orderProcessingService;
-
-        public OrderPresentationService(ILogger logger, OrderProcessingService orderProcessingService)
+        try
         {
-            _logger = logger;
-            _orderProcessingService = orderProcessingService;
+            Print("======================================== Pizza Order Processing System ========================================");
+
+            string filePath = args.Length > 0 ? args[0] : Path.Combine(Directory.GetCurrentDirectory(), "orders.json");
+
+            Print($"\n Processing orders from: {filePath}\n----------------------------------------");
+
+            OrderSummary summary = await orderProcessingService.ProcessOrdersAsync(filePath);
+
+            DisplaySummary(summary);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError("An error occurred while processing orders", ex);
+
+            Print($"Error: {ex.Message}");
         }
 
-        public async Task RunAsync(string[] args)
+        Print("\n Press any key to exit...");
+
+        Console.ReadKey();
+    }
+
+    private static void DisplaySummary(OrderSummary summary)
+    {
+        Print("\n ======================================== Order Summary ======================================== ");
+
+        Print($"\n Successfully Processed Orders: {summary.ValidOrders.Count}");
+
+        if (summary.ValidOrders.Any())
         {
-            try
-            {
-                Console.WriteLine("========================================");
-                Console.WriteLine("    Pizza Order Processing System");
-                Console.WriteLine("========================================");
+            Print("----------------------------------------");
+            
+            summary.ValidOrders.ForEach(order =>
 
-                string filePath;
-                if (args.Length > 0)
-                {
-                    filePath = args[0];
-                }
-                else
-                {
-                    filePath = Path.Combine(Directory.GetCurrentDirectory(), "orders.json");
-                }
-
-                Console.WriteLine($"\nProcessing orders from: {filePath}");
-                Console.WriteLine("----------------------------------------");
-
-                var summary = await _orderProcessingService.ProcessOrdersAsync(filePath);
-
-                DisplaySummary(summary);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError("An error occurred while processing orders", ex);
-                Console.WriteLine($"Error: {ex.Message}");
-            }
-
-            Console.WriteLine("\nPress any key to exit...");
-            Console.ReadKey();
+            Print($"Order ID: {order.OrderId}, Delivery: {order.DeliverAt}, Address: {order.CustomerAddress}, Items: {order.Items.Count}, Total: ${order.TotalPrice:F2} (VAT: ${order.TotalVAT:F2})\n"));
         }
 
-        private static void DisplaySummary(OrderSummary summary)
+        if (summary.InvalidOrders.Any())
         {
-            Console.WriteLine("\n========================================");
-            Console.WriteLine("             Order Summary");
-            Console.WriteLine("========================================");
+            Print($"\nInvalid Orders: {summary.InvalidOrders.Count}\n----------------------------------------");
+            
+            summary.InvalidOrders.ForEach(order => 
 
-            // Valid Orders
-            Console.WriteLine($"\nSuccessfully Processed Orders: {summary.ValidOrders.Count}");
-            if (summary.ValidOrders.Count > 0)
-            {
-                Console.WriteLine("----------------------------------------");
-                foreach (var order in summary.ValidOrders)
-                {
-                    Console.WriteLine($"Order ID: {order.OrderId}");
-                    Console.WriteLine($"Delivery: {order.DeliverAt}");
-                    Console.WriteLine($"Address: {order.CustomerAddress}");
-                    Console.WriteLine($"Items: {order.Items.Count}");
-                    Console.WriteLine($"Total Price: ${order.TotalPrice:F2} (VAT: ${order.TotalVAT:F2})");
-                    Console.WriteLine("----------------------------------------");
-                }
-            }
+            Print($"Order ID: {order.OrderId} Address: {order.CustomerAddress} Items: {order.Items.Count} ----------------------------------------"));
+        }
 
-            // Invalid Orders
-            if (summary.InvalidOrders.Count > 0)
-            {
-                Console.WriteLine($"\nInvalid Orders: {summary.InvalidOrders.Count}");
-                Console.WriteLine("----------------------------------------");
-                foreach (var order in summary.InvalidOrders)
-                {
-                    Console.WriteLine($"Order ID: {order.OrderId}");
-                    Console.WriteLine($"Address: {order.CustomerAddress}");
-                    Console.WriteLine($"Items: {order.Items.Count}");
-                    Console.WriteLine("----------------------------------------");
-                }
-            }
+        Print("\n ======================================== Required Ingredients ========================================");
 
-            // Required Ingredients
-            Console.WriteLine("\n========================================");
-            Console.WriteLine("       Required Ingredients");
-            Console.WriteLine("========================================");
-
-            if (!summary.RequiredIngredients.Any())
+        if (!summary.RequiredIngredients.Any())
+        {
+            Print("No ingredients required");
+        }
+        else
+        {
+            foreach (var (name, amount) in summary.RequiredIngredients)
             {
-                Console.WriteLine("No ingredients required");
-            }
-            else
-            {
-                foreach (var ingredient in summary.RequiredIngredients)
-                {
-                    Console.WriteLine($"{ingredient.Key}: {ingredient.Value:F2}");
-                }
+                Print($"{name}: {amount:F2}");
             }
         }
+    }
+
+    private static void Print(string text) 
+    {
+        Console.WriteLine(text);
     }
 }

@@ -1,0 +1,30 @@
+erDiagram
+    Order {
+        string OrderId PK
+        string ProductId FK
+        int Quantity
+        datetime DeliverAt
+        datetime CreatedAt
+        string CustomerAddress
+    }
+    
+    Product {
+        string ProductId PK
+        string ProductName
+        decimal Price
+        decimal Vat
+    }
+    
+    ProductIngredient {
+        string ProductId PK,FK
+    }
+    
+    Ingredient {
+        string Name
+        decimal Amount
+        string Unit
+    }
+    
+    Product ||--o{ Order : "is ordered in"
+    Product ||--|| ProductIngredient : "has"
+    ProductIngredient ||--o{ Ingredient : "contains"

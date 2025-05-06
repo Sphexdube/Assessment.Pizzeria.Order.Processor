@@ -3,7 +3,7 @@ using Order.Infrastructure.Parser.Interfaces;
 
 namespace Order.Infrastructure.Parser
 {
-    public class CsvOrderFileParser : IOrderFileParser
+    public sealed class CsvOrderFileParser : IOrderFileParser
     {
         private readonly ILogger _logger;
 

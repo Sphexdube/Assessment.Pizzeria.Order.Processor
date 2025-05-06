@@ -1,0 +1,106 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ${APPLICATION_NAME}
+  namespace: ${PROJECT_NAME}
+  annotations:
+    haproxy.router.openshift.io/balance: roundrobin
+    haproxy.router.openshift.io/disable_cookies: "true"
+    haproxy.router.openshift.io/timeout: "60s"
+    haproxy.router.openshift.io/timeout-client: "60s"
+    haproxy.router.openshift.io/timeout-server: "60s"
+spec:
+  replicas: ${APPLICATION_REPLICAS}
+  selector:
+    matchLabels:
+      deploymentconfig: ${APPLICATION_NAME}
+  strategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ${APPLICATION_NAME}
+        app.kubernetes.io/instance: ${APPLICATION_NAME}-${ENVIRONMENT}
+        app.kubernetes.io/version: ${IMAGE_TAG}
+        app.kubernetes.io/component: "backend"
+        app.kubernetes.io/part-of: ${PART_OF}
+        app.openshift.io/runtime: dotnet
+        replicas: "${APPLICATION_REPLICAS}"
+        env: ${ENVIRONMENT}
+        team: ${TEAM}
+        opsteam: ${OPSTEAM}
+        deploymentconfig: ${APPLICATION_NAME}
+        technology: dotnet
+      annotations:
+        metrics.dynatrace.com/scrape: 'true'
+        metrics.dynatrace.com/path: '/metrics'
+        metrics.dynatrace.com/port: '5000'
+        metrics.dynatrace.com/secure: 'false'
+        metrics.dynatrace.com/filter: |
+          {
+            "mode": "include",
+            "names": [ "*orderapi*" ]
+          }
+    spec:
+      containers:
+      - image: ${IMAGE_LOCATION}/${BUILD_NAME}/${IMAGE_STREAM_NAME}:${IMAGE_TAG}
+        envFrom:
+        - configMapRef:
+            name: ${APPLICATION_NAME}  
+        securityContext:
+          allowPrivilegeEscalation: false
+        imagePullPolicy: Always
+        name: ${APPLICATION_NAME}
+        ports:
+        - containerPort: ${APPLICATION_PORT}
+          protocol: TCP        
+        volumeMounts:
+          - name: kafka-ca
+            mountPath: mnt/kafka
+        resources:
+          limits:
+            cpu: "${CPU_LIMIT}"
+            memory: "${MEMORY_LIMIT}"
+          requests:
+            cpu: "${CPU_REQUEST}"
+            memory: "${MEMORY_REQUEST}"
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        readinessProbe:
+          httpGet:
+            path: /api/v1/ping
+            port: 5000
+            scheme: HTTP
+          initialDelaySeconds: 10
+          timeoutSeconds: 10
+          periodSeconds: 30
+          successThreshold: 1
+          failureThreshold: 3
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 5000
+            scheme: HTTP
+          initialDelaySeconds: 10
+          timeoutSeconds: 10
+          periodSeconds: 30
+          successThreshold: 1
+          failureThreshold: 3
+        startupProbe:
+          httpGet:
+            path: /api/v1/ping
+            port: 5000
+            scheme: HTTP
+          initialDelaySeconds: 10
+          timeoutSeconds: 10
+          periodSeconds: 30
+          successThreshold: 1
+          failureThreshold: 3
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - name: kafka-ca
+          secret:
+            secretName: kafka-ca

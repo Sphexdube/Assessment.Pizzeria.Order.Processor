@@ -1,9 +1,9 @@
 ﻿namespace Order.Domain.Models
 {
-    public sealed class Ingredient
+    public sealed record Ingredient
     {
-        public string Name { get; set; } = string.Empty;
-        public decimal Amount { get; set; }
-        public string Unit { get; set; } = string.Empty;
+        public required string Name { get; init; }
+        public required decimal Amount { get; init; }
+        public required string Unit { get; init; }
     }
 }
