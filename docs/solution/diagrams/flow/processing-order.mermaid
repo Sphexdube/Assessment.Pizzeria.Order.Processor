@@ -1,30 +1,30 @@
-flowchart TB
-    inputFile[Order File (JSON/CSV)]
-    app[Pizza Order Processor]
-    parser[Parse File]
-    validator[Validate Orders]
-    calculator[Calculate Prices]
-    ingredientCalc[Calculate Ingredients]
-    publisher[Queue Publisher]
-    reporter[Report Generator]
-    isValid{Is Order Valid?}
-    productData[(Product Catalog)]
-    ingredientData[(Ingredient Data)]
-    queue[(RabbitMQ Queue)]
-    invalidOrders[(Invalid Orders)]
-    console((Console Output))
+graph TD
+    inputFile["Order File (JSON/CSV)"]
+    app["Pizza Order Processor"]
+    parser["Parse File"]
+    validator["Validate Orders"]
+    calculator["Calculate Prices"]
+    ingredientCalc["Calculate Ingredients"]
+    publisher["Queue Publisher"]
+    reporter["Report Generator"]
+    isValid{"Is Order Valid?"}
+    productData[("Product Catalog")]
+    ingredientData[("Ingredient Data")]
+    queue[("RabbitMQ Queue")]
+    invalidOrders[("Invalid Orders")]
+    console(("Console Output"))
 
     inputFile --> app
     app --> parser
     parser --> validator
     validator --> isValid
-    validator --Read--> productData
-    isValid --Not Valid--> invalidOrders
+    validator -- "Read" --> productData
+    isValid -- "Not Valid" --> invalidOrders
     invalidOrders --> reporter
-    isValid --Valid--> calculator
-    calculator --Read--> productData
+    isValid -- "Valid" --> calculator
+    calculator -- "Read" --> productData
     calculator --> ingredientCalc
-    ingredientCalc --Read--> ingredientData
+    ingredientCalc -- "Read" --> ingredientData
     ingredientCalc --> publisher
     publisher --> queue
     publisher --> reporter
