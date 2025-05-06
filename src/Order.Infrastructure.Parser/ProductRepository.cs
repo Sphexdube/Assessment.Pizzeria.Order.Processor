@@ -1,5 +1,4 @@
-﻿using Order.Application.Models;
-using Order.Application.Models.Interfaces;
+﻿using Order.Application.Models.Interfaces;
 using Order.Domain.Models;
 using Order.Domain.Observability.Interfaces;
 using System.Text.Json;
@@ -8,15 +7,11 @@ namespace Order.Infrastructure.Parser
 {
     public class ProductRepository : IProductRepository
     {
-        private readonly string _productsFilePath;
-        private readonly string _ingredientsFilePath;
         private readonly ILogger _logger;
         private List<Product>? _products;
 
-        public ProductRepository(string productsFilePath, string ingredientsFilePath, ILogger logger)
+        public ProductRepository(ILogger logger)
         {
-            _productsFilePath = productsFilePath;
-            _ingredientsFilePath = ingredientsFilePath;
             _logger = logger;
         }
 
@@ -30,14 +25,14 @@ namespace Order.Infrastructure.Parser
             try
             {
                 // Load products
-                string productJson = await File.ReadAllTextAsync(_productsFilePath);
-                var productDtos = JsonSerializer.Deserialize<List<ProductDto>>(productJson,
-                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new List<ProductDto>();
+                string productJson = await File.ReadAllTextAsync("products.json");
+                var productDtos = JsonSerializer.Deserialize<List<Product>>(productJson,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new List<Product>();
 
                 // Load ingredients
-                string ingredientJson = await File.ReadAllTextAsync(_ingredientsFilePath);
-                var productIngredients = JsonSerializer.Deserialize<List<ProductIngredientDto>>(ingredientJson,
-                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new List<ProductIngredientDto>();
+                string ingredientJson = await File.ReadAllTextAsync("ingredients.json");
+                var productIngredients = JsonSerializer.Deserialize<List<Domain.Entities.ProductIngredient>>(ingredientJson,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new List<Domain.Entities.ProductIngredient>();
 
                 // Map products with their ingredients
                 _products = productDtos.Select(dto => new Product
@@ -64,7 +59,7 @@ namespace Order.Infrastructure.Parser
             return products.FirstOrDefault(p => p.ProductId == productId);
         }
 
-        private List<Ingredient> GetIngredientsForProduct(string productId, List<ProductIngredientDto> productIngredients)
+        private List<Ingredient> GetIngredientsForProduct(string productId, List<Domain.Entities.ProductIngredient> productIngredients)
         {
             var productIngredient = productIngredients.FirstOrDefault(pi => pi.ProductId == productId);
             if (productIngredient == null) return new List<Ingredient>();

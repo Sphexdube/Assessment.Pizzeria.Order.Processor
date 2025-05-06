@@ -1,6 +1,7 @@
 ﻿using Order.Application.Models.Interfaces;
 using Order.Domain.Models;
 using Order.Domain.Observability.Interfaces;
+using Order.Infrastructure.Parser.Interfaces;
 
 namespace Order.Presentation.Service
 {

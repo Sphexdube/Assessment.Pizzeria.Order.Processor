@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Order.Application.Models\Order.Application.Models.csproj" />
+    <ProjectReference Include="..\Order.Domain.Entities\Order.Domain.Entities.csproj" />
     <ProjectReference Include="..\Order.Domain.Observability\Order.Domain.Observability.csproj" />
   </ItemGroup>
 

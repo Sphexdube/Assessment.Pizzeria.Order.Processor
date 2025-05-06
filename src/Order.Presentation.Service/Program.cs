@@ -4,6 +4,7 @@ using Order.Application.Models.Interfaces;
 using Order.Domain.Observability;
 using Order.Domain.Observability.Interfaces;
 using Order.Infrastructure.Parser;
+using Order.Infrastructure.Parser.Interfaces;
 
 namespace Order.Presentation.Service
 {
@@ -22,12 +23,8 @@ namespace Order.Presentation.Service
                 .ConfigureServices((context, services) =>
                 {
                     services.AddSingleton<ILogger, ConsoleLogger>();
-                    services.AddSingleton<IOrderFileParser, JsonOrderFileParser>(); // Default to JSON
-                    services.AddSingleton<IProductRepository>(provider =>
-                        new ProductRepository(
-                            "products.json",
-                            "ingredients.json",
-                            provider.GetRequiredService<ILogger>()));
+                    services.AddSingleton<IOrderFileParser, JsonOrderFileParser>();
+                    services.AddSingleton<IProductRepository, ProductRepository>();
                     services.AddSingleton<IOrderQueue, MockOrderQueue>();
                     services.AddSingleton<OrderProcessingService>();
                     services.AddSingleton<OrderPresentationService>();

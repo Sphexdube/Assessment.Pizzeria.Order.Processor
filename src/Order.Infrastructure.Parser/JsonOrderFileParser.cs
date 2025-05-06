@@ -1,6 +1,5 @@
-﻿using Order.Application.Models;
-using Order.Application.Models.Interfaces;
-using Order.Domain.Observability.Interfaces;
+﻿using Order.Domain.Observability.Interfaces;
+using Order.Infrastructure.Parser.Interfaces;
 using System.Text.Json;
 
 namespace Order.Infrastructure.Parser
@@ -14,7 +13,7 @@ namespace Order.Infrastructure.Parser
             _logger = logger;
         }
 
-        public async Task<List<OrderFileEntry>> ParseOrderFileAsync(string filePath)
+        public async Task<List<Domain.Entities.Order>> ParseOrderFileAsync(string filePath)
         {
             try
             {
@@ -25,10 +24,10 @@ namespace Order.Infrastructure.Parser
                 }
 
                 string jsonContent = await File.ReadAllTextAsync(filePath);
-                var entries = JsonSerializer.Deserialize<List<OrderFileEntry>>(jsonContent,
+                var entries = JsonSerializer.Deserialize<List<Domain.Entities.Order>>(jsonContent,
                     new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-                return entries ?? new List<OrderFileEntry>();
+                return entries ?? new List<Domain.Entities.Order>();
             }
             catch (JsonException ex)
             {

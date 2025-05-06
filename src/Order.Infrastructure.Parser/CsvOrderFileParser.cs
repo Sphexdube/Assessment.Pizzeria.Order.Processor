@@ -1,6 +1,5 @@
-﻿using Order.Application.Models;
-using Order.Application.Models.Interfaces;
-using Order.Domain.Observability.Interfaces;
+﻿using Order.Domain.Observability.Interfaces;
+using Order.Infrastructure.Parser.Interfaces;
 
 namespace Order.Infrastructure.Parser
 {
@@ -13,7 +12,7 @@ namespace Order.Infrastructure.Parser
             _logger = logger;
         }
 
-        public async Task<List<OrderFileEntry>> ParseOrderFileAsync(string filePath)
+        public async Task<List<Domain.Entities.Order>> ParseOrderFileAsync(string filePath)
         {
             try
             {
@@ -23,7 +22,7 @@ namespace Order.Infrastructure.Parser
                     throw new FileNotFoundException($"Order file not found: {filePath}");
                 }
 
-                var entries = new List<OrderFileEntry>();
+                var entries = new List<Domain.Entities.Order>();
                 var lines = await File.ReadAllLinesAsync(filePath);
 
                 // Skip header row if it exists
@@ -43,7 +42,7 @@ namespace Order.Infrastructure.Parser
                     {
                         try
                         {
-                            entries.Add(new OrderFileEntry
+                            entries.Add(new Domain.Entities.Order
                             {
                                 OrderId = values[0].Trim(),
                                 ProductId = values[1].Trim(),
