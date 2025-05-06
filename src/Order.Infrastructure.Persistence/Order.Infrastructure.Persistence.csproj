@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Order.Domain.Entities\Order.Domain.Entities.csproj" />
+    <ProjectReference Include="..\Order.Domain.Models\Order.Domain.Models.csproj" />
+    <ProjectReference Include="..\Order.Domain.Observability\Order.Domain.Observability.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,10 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Order.Application.Models.Interfaces;
-using Order.Domain.Observability;
-using Order.Domain.Observability.Interfaces;
-using Order.Infrastructure.Parser;
-using Order.Infrastructure.Parser.Interfaces;
+using Order.Presentation.Service.Configuration;
 
 namespace Order.Presentation.Service
 {
@@ -12,22 +7,10 @@ namespace Order.Presentation.Service
     {
         public static async Task Main(string[] args)
         {
-            var host = CreateHostBuilder(args).Build();
+            var host = HostBuilder.CreateHostBuilder(args).Build();
 
             var orderService = host.Services.GetRequiredService<OrderPresentationService>();
             await orderService.RunAsync(args);
         }
-
-        public static IHostBuilder CreateHostBuilder(string[] args) =>
-            Host.CreateDefaultBuilder(args)
-                .ConfigureServices((context, services) =>
-                {
-                    services.AddSingleton<ILogger, ConsoleLogger>();
-                    services.AddSingleton<IOrderFileParser, JsonOrderFileParser>();
-                    services.AddSingleton<IProductRepository, ProductRepository>();
-                    services.AddSingleton<IOrderQueue, MockOrderQueue>();
-                    services.AddSingleton<OrderProcessingService>();
-                    services.AddSingleton<OrderPresentationService>();
-                });
     }
 }

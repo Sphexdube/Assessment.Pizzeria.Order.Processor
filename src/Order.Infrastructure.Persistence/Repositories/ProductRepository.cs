@@ -1,9 +1,9 @@
-﻿using Order.Application.Models.Interfaces;
-using Order.Domain.Models;
+﻿using Order.Domain.Models;
 using Order.Domain.Observability.Interfaces;
+using Order.Infrastructure.Persistence.Interfaces;
 using System.Text.Json;
 
-namespace Order.Infrastructure.Parser
+namespace Order.Infrastructure.Persistence.Repositories
 {
     public class ProductRepository : IProductRepository
     {

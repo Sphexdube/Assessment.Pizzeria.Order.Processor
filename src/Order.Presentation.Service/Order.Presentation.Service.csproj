@@ -16,6 +16,7 @@
     <ProjectReference Include="..\Order.Application.Models\Order.Application.Models.csproj" />
     <ProjectReference Include="..\Order.Domain.Observability\Order.Domain.Observability.csproj" />
     <ProjectReference Include="..\Order.Infrastructure.Parser\Order.Infrastructure.Parser.csproj" />
+    <ProjectReference Include="..\Order.Infrastructure.Persistence\Order.Infrastructure.Persistence.csproj" />
   </ItemGroup>
 
   <ItemGroup>

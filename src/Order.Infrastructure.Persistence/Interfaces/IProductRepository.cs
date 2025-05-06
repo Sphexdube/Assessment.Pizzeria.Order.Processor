@@ -1,6 +1,6 @@
 ﻿using Order.Domain.Models;
 
-namespace Order.Application.Models.Interfaces
+namespace Order.Infrastructure.Persistence.Interfaces
 {
     public interface IProductRepository
     {

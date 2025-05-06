@@ -2,6 +2,7 @@
 using Order.Domain.Models;
 using Order.Domain.Observability.Interfaces;
 using Order.Infrastructure.Parser.Interfaces;
+using Order.Infrastructure.Persistence.Interfaces;
 
 namespace Order.Presentation.Service
 {

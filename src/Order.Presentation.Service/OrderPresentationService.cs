@@ -5,13 +5,13 @@ namespace Order.Presentation.Service
 {
     public class OrderPresentationService
     {
-        private readonly OrderProcessingService _orderProcessingService;
         private readonly ILogger _logger;
+        private readonly OrderProcessingService _orderProcessingService;
 
-        public OrderPresentationService(OrderProcessingService orderProcessingService, ILogger logger)
+        public OrderPresentationService(ILogger logger, OrderProcessingService orderProcessingService)
         {
-            _orderProcessingService = orderProcessingService;
             _logger = logger;
+            _orderProcessingService = orderProcessingService;
         }
 
         public async Task RunAsync(string[] args)
