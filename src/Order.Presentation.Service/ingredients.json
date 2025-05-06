@@ -1,0 +1,82 @@
+[
+  {
+    "productId": "PIZZA-001",
+    "ingredients": [
+      {
+        "name": "Dough",
+        "amount": 250,
+        "unit": "g"
+      },
+      {
+        "name": "Tomato Sauce",
+        "amount": 100,
+        "unit": "g"
+      },
+      {
+        "name": "Mozzarella",
+        "amount": 150,
+        "unit": "g"
+      },
+      {
+        "name": "Basil",
+        "amount": 5,
+        "unit": "g"
+      }
+    ]
+  },
+  {
+    "productId": "PIZZA-002",
+    "ingredients": [
+      {
+        "name": "Dough",
+        "amount": 250,
+        "unit": "g"
+      },
+      {
+        "name": "Tomato Sauce",
+        "amount": 100,
+        "unit": "g"
+      },
+      {
+        "name": "Mozzarella",
+        "amount": 120,
+        "unit": "g"
+      },
+      {
+        "name": "Pepperoni",
+        "amount": 80,
+        "unit": "g"
+      }
+    ]
+  },
+  {
+    "productId": "PIZZA-003",
+    "ingredients": [
+      {
+        "name": "Dough",
+        "amount": 250,
+        "unit": "g"
+      },
+      {
+        "name": "Tomato Sauce",
+        "amount": 100,
+        "unit": "g"
+      },
+      {
+        "name": "Mozzarella",
+        "amount": 120,
+        "unit": "g"
+      },
+      {
+        "name": "Bell Peppers",
+        "amount": 40,
+        "unit": "g"
+      },
+      {
+        "name": "Mushrooms",
+        "amount": 40,
+        "unit": "g"
+      }
+    ]
+  }
+]

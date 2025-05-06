@@ -1,0 +1,166 @@
+name: transaction-backend-reconciliation
+services:
+#=========================================================================
+# SQL Server
+# -----------------
+# Server: localhost
+# Username: sa
+# Password: P@ssw0rd1
+#=========================================================================
+  sql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: sql
+    environment:
+      - MSSQL_SA_PASSWORD=P@ssw0rd1
+      - MSSQL_PID=Evaluation
+      - ACCEPT_EULA=Y
+    ports:
+      - "1433:1433"
+
+#=========================================================================
+# Deploy the database scripts
+#=========================================================================
+  dbReconciliation:
+    image: erikbra/grate:latest
+    entrypoint: ['']
+    command:
+      - /bin/sh
+      - -c
+      - |
+        retry_count=0
+        max_retries=5
+        while [ $retry_count -lt $max_retries ]
+        do
+          echo "Attempt $((retry_count + 1))..."
+          ./grate --connstring="Server=sql;Database=dbReconciliation;User Id=sa;Password=P@ssw0rd1;TrustServerCertificate=True" --sqlfilesdirectory=/db --version=1.0.0 --databasetype=sqlserver --silent --outputPath=/output --createdatabase=true --environment=LOCAL --transaction=false
+          if [ $? -eq 0 ]; then
+            echo "Command succeeded."
+            exit 0
+          fi
+          retry_count=$((retry_count + 1))
+          echo "Command failed. Retrying in 5 seconds..."
+          sleep 5
+        done
+        echo "Command failed after $max_retries attempts."
+        exit 1
+    volumes:
+      - ./dbReconciliation:/db
+    depends_on:
+      - sql
+
+#=========================================================================
+# Kafka
+# -----------------
+#
+# Control Center
+# Server: http://localhost:9021
+#=========================================================================
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,PLAINTEXT_HOST://0.0.0.0:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    ports:
+      - "29092:29092"
+      - "9092:9092"
+      - "9101:9101"
+    healthcheck:
+      test: ["CMD", "kafka-topics", "--bootstrap-server", "localhost:9092", "--list"]
+      interval: 10s
+      retries: 10
+      start_period: 10s
+    command: >
+      bash -c "
+      /etc/confluent/docker/run &
+      echo 'Waiting for Kafka to start...';
+      sleep 10;
+      kafka-topics --create --bootstrap-server kafka:9092 --replication-factor 1 --partitions 1 --topic local.storesystems.transactionbackend.reconciliation.v1
+      echo 'Kafka topics created.';
+      wait
+      "
+
+  schema-registry:
+    image: confluentinc/cp-schema-registry:latest
+    container_name: schema-registry
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: PLAINTEXT://kafka:29092
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+    ports:
+      - "8081:8081"
+
+  ksqldb-server:
+    image: confluentinc/cp-ksqldb-server:latest
+    container_name: ksqldb-server
+    depends_on:
+      kafka:
+        condition: service_healthy
+      schema-registry:
+        condition: service_started
+    environment:
+      KSQL_CONFIG_DIR: "/etc/ksqldb"
+      KSQL_BOOTSTRAP_SERVERS: kafka:29092
+      KSQL_HOST_NAME: ksqldb-server
+      KSQL_LISTENERS: http://0.0.0.0:8088
+      KSQL_KSQL_SCHEMA_REGISTRY_URL: http://schema-registry:8081
+    ports:
+      - "8088:8088"
+
+  connect:
+    image: confluentinc/cp-kafka-connect:latest
+    container_name: kafka-connect
+    depends_on:
+      kafka:
+        condition: service_healthy
+      schema-registry:
+        condition: service_started
+    environment:
+      CONNECT_BOOTSTRAP_SERVERS: kafka:29092
+      CONNECT_REST_ADVERTISED_HOST_NAME: connect
+      CONNECT_GROUP_ID: "kafka-connect-group"
+      CONNECT_CONFIG_STORAGE_TOPIC: "connect-configs"
+      CONNECT_OFFSET_STORAGE_TOPIC: "connect-offsets"
+      CONNECT_STATUS_STORAGE_TOPIC: "connect-status"
+      CONNECT_KEY_CONVERTER: "org.apache.kafka.connect.storage.StringConverter"
+      CONNECT_VALUE_CONVERTER: "org.apache.kafka.connect.storage.StringConverter"
+      CONNECT_REST_PORT: 8083
+      CONNECT_SCHEMA_REGISTRY_URL: http://schema-registry:8081
+    ports:
+      - "8083:8083"
+
+  control-center:
+    image: confluentinc/cp-enterprise-control-center:latest
+    container_name: control-center
+    depends_on:
+      kafka:
+        condition: service_healthy
+      schema-registry:
+        condition: service_started
+    environment:
+      CONTROL_CENTER_BOOTSTRAP_SERVERS: kafka:29092
+      CONTROL_CENTER_ZOOKEEPER_CONNECT: zookeeper:2181
+      CONTROL_CENTER_CONNECT_CLUSTER: connect:8083
+      CONTROL_CENTER_KSQL_KSQLDB1_URL: http://ksqldb-server:8088
+      CONTROL_CENTER_SCHEMA_REGISTRY_URL: http://schema-registry:8081
+      CONTROL_CENTER_REPLICATION_FACTOR: 1
+    ports:
+      - "9021:9021"

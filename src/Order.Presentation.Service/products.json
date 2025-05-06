@@ -1,0 +1,32 @@
+[
+  {
+    "productId": "PIZZA-001",
+    "productName": "Margherita",
+    "price": 9.99,
+    "vat": 10.0
+  },
+  {
+    "productId": "PIZZA-002",
+    "productName": "Pepperoni",
+    "price": 12.99,
+    "vat": 10.0
+  },
+  {
+    "productId": "PIZZA-003",
+    "productName": "Vegetarian",
+    "price": 11.99,
+    "vat": 10.0
+  },
+  {
+    "productId": "PIZZA-004",
+    "productName": "Hawaiian",
+    "price": 13.99,
+    "vat": 10.0
+  },
+  {
+    "productId": "PIZZA-005",
+    "productName": "Supreme",
+    "price": 14.99,
+    "vat": 10.0
+  }
+]
