@@ -11,8 +11,6 @@ namespace Order.Presentation.Service
     {
         public static async Task Main(string[] args)
         {
-            args = ["C:\\Assessments\\Assessment.Pizza.Order.Processor\\sample\\sample-orders.json"];
-
             var host = CreateHostBuilder(args).Build();
 
             var orderService = host.Services.GetRequiredService<OrderPresentationService>();

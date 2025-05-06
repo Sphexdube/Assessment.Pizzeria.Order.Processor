@@ -22,6 +22,9 @@
     <None Update="ingredients.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="orders.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="products.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

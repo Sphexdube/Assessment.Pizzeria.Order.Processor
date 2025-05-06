@@ -29,8 +29,7 @@ namespace Order.Presentation.Service
                 }
                 else
                 {
-                    Console.Write("Enter order file path: ");
-                    filePath = Console.ReadLine() ?? "orders.json";
+                    filePath = Path.Combine(Directory.GetCurrentDirectory(), "orders.json");
                 }
 
                 Console.WriteLine($"\nProcessing orders from: {filePath}");
